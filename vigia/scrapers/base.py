@@ -102,6 +102,23 @@ class BaseScraper:
         headers = self.headers.copy()
         headers["User-Agent"] = random.choice(USER_AGENTS)
 
+        # Tentativa 1: curl_cffi com impersonate chrome120 (bypassa Cloudflare/anti-bot)
+        try:
+            from curl_cffi import requests as cffi_requests
+            resp = cffi_requests.get(
+                url,
+                impersonate="chrome120",
+                timeout=int(self.timeout),
+                headers=headers,
+            )
+            if resp.status_code == 200:
+                return resp.text
+            else:
+                logger.warning(f"[{self.store_name}] curl_cffi HTTP {resp.status_code} para {url}")
+        except Exception as exc:
+            logger.debug(f"[{self.store_name}] curl_cffi não disponível ou falhou: {exc}")
+
+        # Tentativa 2: httpx como fallback
         try:
             with httpx.Client(
                 timeout=self.timeout,
@@ -113,7 +130,7 @@ class BaseScraper:
                     return resp.text
                 else:
                     logger.warning(
-                        f"[{self.store_name}] HTTP {resp.status_code} para {url}"
+                        f"[{self.store_name}] httpx HTTP {resp.status_code} para {url}"
                     )
                     return None
         except Exception as exc:
