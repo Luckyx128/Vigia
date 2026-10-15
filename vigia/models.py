@@ -82,6 +82,7 @@ class ProductDetailResponse(BaseModel):
 
 
 class HistoryRecord(BaseModel):
+    id: Optional[int] = None
     scraped_at: str
     store_name: str
     price_cash: Optional[float] = None

@@ -115,6 +115,7 @@ def get_product_history_data(product_id: int, db_path: Optional[Path] = None) ->
     formatted_records = []
     for r in records:
         formatted_records.append({
+            "id": r.get("id"),
             "scraped_at": r["scraped_at"],
             "store_name": r["store_name"],
             "price_cash": r["price_cash"],

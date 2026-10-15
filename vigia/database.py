@@ -246,7 +246,7 @@ def get_price_history_for_product(product_id: int, db_path: Optional[Path] = Non
     with get_db(db_path) as conn:
         rows = conn.execute(
             """
-            SELECT scraped_at, store_name, price_cash, price_installment, in_stock
+            SELECT id, scraped_at, store_name, price_cash, price_installment, in_stock
             FROM price_records
             WHERE product_id = ?
             ORDER BY scraped_at ASC, id ASC
@@ -286,3 +286,17 @@ def get_30d_avg(product_id: int, db_path: Optional[Path] = None) -> Optional[flo
         if row and row["avg_price"] is not None:
             return round(float(row["avg_price"]), 2)
         return None
+
+
+def delete_price_record(record_id: int, db_path: Optional[Path] = None) -> bool:
+    """Remove um registro específico de preço pelo ID."""
+    with get_db(db_path) as conn:
+        cur = conn.execute("DELETE FROM price_records WHERE id = ?", (record_id,))
+        return cur.rowcount > 0
+
+
+def clear_product_history(product_id: int, db_path: Optional[Path] = None) -> int:
+    """Remove todo o histórico de preços de um produto."""
+    with get_db(db_path) as conn:
+        cur = conn.execute("DELETE FROM price_records WHERE product_id = ?", (product_id,))
+        return cur.rowcount

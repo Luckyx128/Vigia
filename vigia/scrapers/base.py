@@ -179,12 +179,22 @@ class BaseScraper:
             success=True,
         )
 
-    def scrape(self, url: str) -> ScrapeResult:
-        """Método principal. Tenta scraping real e aplica fallback resiliente se necessário."""
+    def scrape(self, url: str, allow_fallback: bool = False) -> ScrapeResult:
+        """
+        Método principal. Tenta scraping real.
+        Só recorre ao fallback sintético se allow_fallback=True (ex: testes/modo demo).
+        """
         html = self.fetch_html(url)
         if not html:
-            logger.info(f"[{self.store_name}] Aplicando fallback resiliente para {url}")
-            return self.resilient_fallback(url)
+            if allow_fallback:
+                logger.info(f"[{self.store_name}] Aplicando fallback sintético para {url}")
+                return self.resilient_fallback(url)
+            return ScrapeResult(
+                store_name=self.store_name,
+                url=url,
+                success=False,
+                error_message=f"Falha na conexão com {self.store_name}",
+            )
 
         try:
             result = self._parse_html(html, url)
@@ -193,9 +203,16 @@ class BaseScraper:
         except Exception as exc:
             logger.warning(f"[{self.store_name}] Erro no parsing HTML de {url}: {exc}")
 
-        # Se não obteve preço válido, usa o fallback resiliente
-        logger.info(f"[{self.store_name}] Parsing incompleto. Recorrendo ao fallback resiliente.")
-        return self.resilient_fallback(url)
+        if allow_fallback:
+            logger.info(f"[{self.store_name}] Parsing incompleto. Recorrendo ao fallback sintético.")
+            return self.resilient_fallback(url)
+
+        return ScrapeResult(
+            store_name=self.store_name,
+            url=url,
+            success=False,
+            error_message=f"Preço não identificado no HTML de {self.store_name}",
+        )
 
     def _parse_html(self, html: str, url: str) -> Optional[ScrapeResult]:
         """Implementado pelas classes filhas."""

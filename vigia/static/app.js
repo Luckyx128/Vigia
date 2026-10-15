@@ -1055,6 +1055,78 @@ class VigiaApp {
         }
       }
     });
+
+    // Renderiza lista detalhada de leituras com botão de exclusão
+    this.renderChartRecordsList(history.records);
+  }
+
+  renderChartRecordsList(records) {
+    const listEl = document.getElementById('chartRecordsList');
+    if (!listEl) return;
+
+    if (!records || records.length === 0) {
+      listEl.innerHTML = `<div class="text-slate-500 text-center py-2 text-xs">Nenhuma leitura gravada ainda.</div>`;
+      return;
+    }
+
+    // Ordena mais recente primeiro
+    const sorted = [...records].reverse();
+    listEl.innerHTML = sorted.map(r => {
+      const storeColor = getStoreColor(r.store_name);
+      return `
+        <div class="flex items-center justify-between p-2 rounded-lg bg-slate-900/60 border border-slate-800/80 hover:border-slate-700 transition-colors">
+          <div class="flex items-center gap-2">
+            <span class="px-2 py-0.5 rounded text-[10px] font-semibold ${storeColor.class}">${this.escapeHTML(r.store_name)}</span>
+            <span class="text-slate-400 font-mono-numbers text-[11px]">${formatDateTime(r.scraped_at)}</span>
+          </div>
+          <div class="flex items-center gap-3">
+            <span class="font-bold text-white font-mono-numbers">${formatBRL(r.price_cash)}</span>
+            ${r.price_installment ? `<span class="text-slate-400 text-[11px] hidden sm:inline">(${formatBRL(r.price_installment)} prazo)</span>` : ''}
+            ${r.id ? `
+              <button onclick="app.deletePriceRecord(${r.id})" title="Remover esta leitura do histórico" class="p-1 rounded text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors">
+                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+              </button>
+            ` : ''}
+          </div>
+        </div>
+      `;
+    }).join('');
+    this.refreshIcons();
+  }
+
+  async deletePriceRecord(recordId) {
+    if (!confirm('Deseja excluir esta leitura específica do histórico de preços?')) return;
+    try {
+      const res = await fetch(`/api/records/${recordId}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Falha ao excluir registro');
+      this.showToast('Leitura removida do histórico!', 'success');
+      
+      if (this.currentChartProduct) {
+        this.currentChartHistory = await this.fetchProductHistory(this.currentChartProduct.id);
+        this.renderPriceChart();
+      }
+      await this.fetchProducts();
+    } catch (err) {
+      this.showToast(`Erro ao excluir: ${err.message}`, 'error');
+    }
+  }
+
+  async resetCurrentProductHistory() {
+    if (!this.currentChartProduct) return;
+    const name = this.currentChartProduct.name;
+    if (!confirm(`Tem certeza que deseja apagar TODO o histórico de preços de "${name}"? Essa ação não pode ser desfeita.`)) return;
+
+    try {
+      const res = await fetch(`/api/products/${this.currentChartProduct.id}/reset-history`, { method: 'POST' });
+      if (!res.ok) throw new Error('Falha ao limpar histórico');
+      this.showToast(`Histórico de "${name}" limpo com sucesso!`, 'info');
+      
+      this.currentChartHistory = await this.fetchProductHistory(this.currentChartProduct.id);
+      this.renderPriceChart();
+      await this.fetchProducts();
+    } catch (err) {
+      this.showToast(`Erro ao limpar histórico: ${err.message}`, 'error');
+    }
   }
 
   // ==========================================

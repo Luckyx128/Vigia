@@ -146,6 +146,24 @@ def get_product_history(product_id: int):
     return data
 
 
+@app.delete("/api/records/{record_id}", summary="Remove um registro específico de preço")
+def remove_price_record(record_id: int):
+    """Remove uma leitura espúria ou incorreta de preço do histórico."""
+    from vigia.database import delete_price_record
+    success = delete_price_record(record_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Registro não encontrado")
+    return {"success": True, "message": f"Registro #{record_id} removido do histórico"}
+
+
+@app.post("/api/products/{product_id}/reset-history", summary="Limpa todo o histórico de um produto")
+def reset_product_history(product_id: int):
+    """Apaga todas as leituras antigas de um produto para reiniciar a contagem limpa."""
+    from vigia.database import clear_product_history
+    count = clear_product_history(product_id)
+    return {"success": True, "deleted_count": count, "message": f"{count} registros removidos"}
+
+
 # --- Endpoints de Varredura / Scraping ---
 
 @app.post("/api/scrape/all", response_model=ScrapeSummaryResponse, summary="Varre todos os produtos")
