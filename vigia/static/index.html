@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vigia // Radar Black Friday & Monitor de Preços</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2310b981' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='10'/><path d='m16 12-4-4-4 4'/><path d='M12 16V8'/></svg>">
+
+  <!-- Tailwind CSS via CDN with custom config -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            vigia: {
+              bg: '#07090e',
+              surface: '#0d121d',
+              card: 'rgba(17, 24, 39, 0.75)',
+              border: 'rgba(31, 41, 55, 0.8)',
+              emerald: '#10b981',
+              cyan: '#06b6d4',
+              orange: '#f97316'
+            },
+            store: {
+              kabum: '#FF6500',
+              terabyte: '#0084FF',
+              pichau: '#E30613',
+              amazon: '#FF9900',
+              ml: '#FFE600'
+            }
+          },
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Lucide Icons via CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Chart.js via CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-vigia-bg text-slate-100 min-h-screen flex flex-col antialiased selection:bg-emerald-500/20 selection:text-emerald-300">
+
+  <!-- Topbar Header -->
+  <header class="sticky top-0 z-40 border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-xl">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16 sm:h-20 gap-4">
+        
+        <!-- Logo & Branding -->
+        <div class="flex items-center space-x-3.5">
+          <div class="relative flex items-center justify-center w-11 h-11 rounded-xl bg-gradient-to-br from-emerald-500/20 via-cyan-500/10 to-blue-500/20 border border-emerald-500/40 glow-emerald">
+            <i data-lucide="radar" class="w-6 h-6 text-emerald-400"></i>
+            <span class="absolute -top-1 -right-1 flex h-3 w-3">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+            </span>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="text-xl sm:text-2xl font-black tracking-tight bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400 bg-clip-text text-transparent">
+                VIGIA
+              </span>
+              <span class="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                Radar Black Friday
+              </span>
+            </div>
+            <p class="text-xs text-slate-400 hidden sm:block">Monitor de Preços Reais & Histórico Multi-lojas</p>
+          </div>
+        </div>
+
+        <!-- Center: Notch Cortinho Status -->
+        <div class="hidden md:flex items-center px-3.5 py-1.5 rounded-full bg-slate-900/90 border border-slate-800 text-xs shadow-inner">
+          <div class="flex items-center gap-2">
+            <span id="notchStatusDot" class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span class="text-slate-400">Notch Cortinho:</span>
+            <span id="notchStatusText" class="font-semibold text-emerald-400">Pronta (Porta 48123)</span>
+          </div>
+        </div>
+
+        <!-- Right Header Actions -->
+        <div class="flex items-center gap-2 sm:gap-3">
+          
+          <!-- Test Notch Notification Button -->
+          <button id="btnTestNotch" onclick="app.testNotchNotification()" class="group relative inline-flex items-center justify-center gap-2 px-3 sm:px-3.5 py-2 text-xs sm:text-sm font-semibold rounded-lg bg-slate-900/90 hover:bg-slate-800 border border-slate-700/80 text-slate-300 hover:text-white transition-all shadow-sm hover:border-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-400">
+            <i data-lucide="bell-ring" class="w-4 h-4 text-cyan-400 group-hover:scale-110 transition-transform"></i>
+            <span class="hidden sm:inline">Testar Notch</span>
+            <span class="sm:hidden">Notch</span>
+          </button>
+
+          <!-- Scrape All Now Button -->
+          <button id="btnScrapeAll" onclick="app.triggerScrapeAll()" class="group relative inline-flex items-center justify-center gap-2 px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-lg shadow-emerald-900/30 transition-all border border-emerald-400/30 focus:outline-none focus:ring-2 focus:ring-emerald-400">
+            <i id="btnScrapeIcon" data-lucide="refresh-cw" class="w-4 h-4 text-emerald-100 transition-transform"></i>
+            <span id="btnScrapeText">Varredura Agora</span>
+          </button>
+
+          <!-- Add Product Button -->
+          <button onclick="app.openNewProductModal()" class="inline-flex items-center justify-center gap-1.5 px-3 sm:px-3.5 py-2 text-xs sm:text-sm font-semibold rounded-lg bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-900/20 transition-all border border-blue-400/30 focus:outline-none focus:ring-2 focus:ring-blue-400">
+            <i data-lucide="plus" class="w-4 h-4"></i>
+            <span class="hidden sm:inline">Novo Produto</span>
+          </button>
+
+        </div>
+
+      </div>
+    </div>
+  </header>
+
+  <!-- Sub-bar Alert / Backend Connection Banner (Hidden by default, shown if fallback/demo mode) -->
+  <div id="connectionBanner" class="hidden border-b border-amber-500/20 bg-amber-500/10 px-4 py-2 text-xs text-amber-300">
+    <div class="max-w-7xl mx-auto flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <i data-lucide="info" class="w-4 h-4 text-amber-400"></i>
+        <span id="connectionBannerMessage">Modo Demonstração Interativo Ativo: API backend ainda não conectada. Exibindo dados simulados de alta fidelidade.</span>
+      </div>
+      <button onclick="app.fetchProducts()" class="underline font-semibold hover:text-white transition-colors">
+        Tentar Reconectar
+      </button>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-8">
+    
+    <!-- Hero / Headline & KPI Cards -->
+    <section class="space-y-6">
+      
+      <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div>
+          <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-white flex items-center gap-3">
+            Painel de Monitoramento
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+              Ao Vivo
+            </span>
+          </h1>
+          <p class="text-sm text-slate-400 mt-1">
+            Acompanhamento contínuo de hardware com detecção de descontos autênticos e proteção contra a "metade do dobro".
+          </p>
+        </div>
+
+        <div class="flex items-center gap-2 text-xs text-slate-400">
+          <i data-lucide="clock" class="w-4 h-4 text-slate-500"></i>
+          <span>Última checagem:</span>
+          <span id="lastScrapedTimestamp" class="font-mono text-slate-300 font-semibold">Atualizando...</span>
+        </div>
+      </div>
+
+      <!-- KPI Summary Cards -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        
+        <!-- KPI 1: Total Produtos -->
+        <div class="glass-panel glass-panel-hover rounded-2xl p-5 border border-slate-800 relative overflow-hidden">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Produtos Rastreados</span>
+            <div class="p-2 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+              <i data-lucide="cpu" class="w-5 h-5"></i>
+            </div>
+          </div>
+          <div class="mt-4 flex items-baseline gap-2">
+            <span id="kpiTotalProducts" class="text-3xl font-extrabold text-white font-mono-numbers">0</span>
+            <span id="kpiActiveLinks" class="text-xs text-slate-400">em 0 lojas ativas</span>
+          </div>
+          <div class="mt-3 flex items-center text-xs text-cyan-400 font-medium">
+            <i data-lucide="shield-check" class="w-3.5 h-3.5 mr-1"></i>
+            <span>Monitoramento 24/7 ativo</span>
+          </div>
+        </div>
+
+        <!-- KPI 2: Menor Preço Histórico Geral -->
+        <div class="glass-panel glass-panel-hover rounded-2xl p-5 border border-slate-800 relative overflow-hidden">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Menor Preço Registrado</span>
+            <div class="p-2 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+              <i data-lucide="trending-down" class="w-5 h-5"></i>
+            </div>
+          </div>
+          <div class="mt-4 flex items-baseline gap-2">
+            <span id="kpiLowestPrice" class="text-3xl font-extrabold text-emerald-400 font-mono-numbers">R$ --,--</span>
+          </div>
+          <div class="mt-3 flex items-center text-xs text-emerald-400/90 truncate">
+            <span id="kpiLowestProduct" class="truncate font-medium">Aguardando dados...</span>
+          </div>
+        </div>
+
+        <!-- KPI 3: Alertas / Ofertas na Meta -->
+        <div class="glass-panel glass-panel-hover rounded-2xl p-5 border border-slate-800 relative overflow-hidden">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Alertas na Meta</span>
+            <div class="p-2 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
+              <i data-lucide="target" class="w-5 h-5"></i>
+            </div>
+          </div>
+          <div class="mt-4 flex items-baseline gap-2">
+            <span id="kpiActiveDeals" class="text-3xl font-extrabold text-amber-400 font-mono-numbers">0</span>
+            <span class="text-xs text-slate-400">produtos abaixo do alvo</span>
+          </div>
+          <div class="mt-3 flex items-center text-xs text-amber-400 font-medium">
+            <i data-lucide="zap" class="w-3.5 h-3.5 mr-1"></i>
+            <span>Gatilho direto para Notch</span>
+          </div>
+        </div>
+
+        <!-- KPI 4: Desconto Médio vs 30d -->
+        <div class="glass-panel glass-panel-hover rounded-2xl p-5 border border-slate-800 relative overflow-hidden">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Desconto Médio Black</span>
+            <div class="p-2 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20">
+              <i data-lucide="flame" class="w-5 h-5"></i>
+            </div>
+          </div>
+          <div class="mt-4 flex items-baseline gap-2">
+            <span id="kpiAvgDiscount" class="text-3xl font-extrabold text-purple-400 font-mono-numbers">--%</span>
+            <span class="text-xs text-slate-400">vs média de 30 dias</span>
+          </div>
+          <div class="mt-3 flex items-center text-xs text-purple-300 font-medium">
+            <i data-lucide="badge-percent" class="w-3.5 h-3.5 mr-1"></i>
+            <span>Preço limpo de maquiagem</span>
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- Filter, Search & Sorting Bar -->
+    <section class="glass-panel rounded-2xl p-4 sm:p-5 border border-slate-800 space-y-4">
+      <div class="flex flex-col md:flex-row gap-4 justify-between items-stretch md:items-center">
+        
+        <!-- Search Bar -->
+        <div class="relative flex-1 max-w-md">
+          <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+            <i data-lucide="search" class="w-4 h-4"></i>
+          </div>
+          <input 
+            type="text" 
+            id="searchInput" 
+            placeholder="Buscar por processador, SSD, especificação..." 
+            class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-900/90 border border-slate-700/80 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
+            oninput="app.handleSearch(this.value)"
+          >
+        </div>
+
+        <!-- Filter Pills & Sorting -->
+        <div class="flex flex-wrap items-center gap-2.5">
+          
+          <!-- Category Filter -->
+          <div class="flex items-center gap-1.5 p-1 rounded-xl bg-slate-900/80 border border-slate-800 text-xs">
+            <button onclick="app.setCategoryFilter('all')" data-cat="all" class="cat-pill px-3 py-1.5 rounded-lg font-medium transition-all bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+              Todos
+            </button>
+            <button onclick="app.setCategoryFilter('Processador')" data-cat="Processador" class="cat-pill px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-white transition-all">
+              Processadores
+            </button>
+            <button onclick="app.setCategoryFilter('SSD')" data-cat="SSD" class="cat-pill px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-white transition-all">
+              SSDs
+            </button>
+          </div>
+
+          <!-- Deal Filter -->
+          <select id="dealFilterSelect" onchange="app.setDealFilter(this.value)" class="px-3 py-2 rounded-xl bg-slate-900/90 border border-slate-700/80 text-xs text-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            <option value="all">Todos os Selos</option>
+            <option value="real">🟢 Selo Preço Real</option>
+            <option value="target">🎯 Abaixo da Meta</option>
+            <option value="warning">🔴 Alerta de Alta</option>
+          </select>
+
+          <!-- Sorting -->
+          <select id="sortSelect" onchange="app.setSortOrder(this.value)" class="px-3 py-2 rounded-xl bg-slate-900/90 border border-slate-700/80 text-xs text-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            <option value="default">Ordenar: Padrão</option>
+            <option value="price-asc">Menor Preço Atual</option>
+            <option value="discount-desc">Maior Desconto %</option>
+            <option value="name-asc">Nome (A - Z)</option>
+          </select>
+
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Products Grid Section -->
+    <section class="space-y-4">
+      <div class="flex items-center justify-between">
+        <h2 class="text-lg font-bold text-slate-200 flex items-center gap-2">
+          <span>Produtos Monitorados</span>
+          <span id="filteredProductsCount" class="text-xs px-2 py-0.5 rounded-md bg-slate-800 text-slate-400 font-mono">0</span>
+        </h2>
+        
+        <div class="flex items-center gap-3 text-xs text-slate-400">
+          <span class="inline-flex items-center gap-1.5">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span> Preço Real
+          </span>
+          <span class="inline-flex items-center gap-1.5">
+            <span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span> Normal
+          </span>
+          <span class="inline-flex items-center gap-1.5">
+            <span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span> Alerta Alta
+          </span>
+        </div>
+      </div>
+
+      <!-- Loading State -->
+      <div id="loadingGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 py-6">
+        <div class="glass-panel rounded-2xl p-6 border border-slate-800 animate-pulse space-y-4">
+          <div class="h-4 bg-slate-800 rounded w-1/3"></div>
+          <div class="h-6 bg-slate-800 rounded w-3/4"></div>
+          <div class="h-16 bg-slate-800/60 rounded"></div>
+          <div class="h-10 bg-slate-800 rounded"></div>
+        </div>
+        <div class="glass-panel rounded-2xl p-6 border border-slate-800 animate-pulse space-y-4">
+          <div class="h-4 bg-slate-800 rounded w-1/3"></div>
+          <div class="h-6 bg-slate-800 rounded w-3/4"></div>
+          <div class="h-16 bg-slate-800/60 rounded"></div>
+          <div class="h-10 bg-slate-800 rounded"></div>
+        </div>
+        <div class="glass-panel rounded-2xl p-6 border border-slate-800 animate-pulse space-y-4">
+          <div class="h-4 bg-slate-800 rounded w-1/3"></div>
+          <div class="h-6 bg-slate-800 rounded w-3/4"></div>
+          <div class="h-16 bg-slate-800/60 rounded"></div>
+          <div class="h-10 bg-slate-800 rounded"></div>
+        </div>
+      </div>
+
+      <!-- Products Grid Container -->
+      <div id="productsGrid" class="hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- Injected via JavaScript -->
+      </div>
+
+      <!-- Empty State -->
+      <div id="emptyState" class="hidden text-center py-16 px-4 glass-panel rounded-2xl border border-slate-800">
+        <div class="inline-flex p-4 rounded-2xl bg-slate-800/60 text-slate-400 mb-4">
+          <i data-lucide="package-search" class="w-10 h-10"></i>
+        </div>
+        <h3 class="text-base font-bold text-white">Nenhum produto encontrado</h3>
+        <p class="text-sm text-slate-400 mt-1 max-w-sm mx-auto">
+          Tente ajustar sua busca ou filtros, ou adicione um novo produto para monitorar.
+        </p>
+        <button onclick="app.openNewProductModal()" class="mt-5 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-lg shadow-emerald-900/30 transition-all">
+          <i data-lucide="plus" class="w-4 h-4"></i>
+          Cadastrar Produto
+        </button>
+      </div>
+
+    </section>
+
+    <!-- Legend & Black Friday Methodology Section -->
+    <section class="glass-panel rounded-2xl p-6 border border-slate-800">
+      <h3 class="text-sm font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2 mb-4">
+        <i data-lucide="shield-alert" class="w-4 h-4 text-emerald-400"></i>
+        Como Funciona o Selo Black Friday Real do Vigia
+      </h3>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+        
+        <div class="p-3.5 rounded-xl bg-slate-900/60 border border-emerald-500/20 space-y-1.5">
+          <div class="flex items-center gap-2 text-emerald-400 font-bold">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+            Selo Verde: Preço Real / Menor Histórico
+          </div>
+          <p class="text-slate-400 leading-relaxed">
+            O valor atual está no patamar mais baixo dos últimos 30-90 dias ou rompeu a meta estipulada. Promoção genuína sem maquiagem.
+          </p>
+        </div>
+
+        <div class="p-3.5 rounded-xl bg-slate-900/60 border border-amber-500/20 space-y-1.5">
+          <div class="flex items-center gap-2 text-amber-400 font-bold">
+            <span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
+            Selo Amarelo: Preço Normal / Em Observação
+          </div>
+          <p class="text-slate-400 leading-relaxed">
+            Preço dentro da média usual de mercado. Vale acompanhar as próximas varreduras antes de fechar a compra.
+          </p>
+        </div>
+
+        <div class="p-3.5 rounded-xl bg-slate-900/60 border border-rose-500/20 space-y-1.5">
+          <div class="flex items-center gap-2 text-rose-400 font-bold">
+            <span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
+            Selo Vermelho: Alerta "Metade do Dobro"
+          </div>
+          <p class="text-slate-400 leading-relaxed">
+            Preço sofreu aumento pré-Black Friday para forjar desconto artificial posterior. Recomendado aguardar correção.
+          </p>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="border-t border-slate-800/80 bg-slate-950/60 py-6 text-xs text-slate-500">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div class="flex items-center gap-2">
+        <span class="font-bold text-slate-400">Vigia</span>
+        <span>•</span>
+        <span>Sistema de Monitoramento Autônomo para Black Friday</span>
+      </div>
+      <div class="flex items-center gap-4">
+        <span>Lojas integradas: Kabum, Terabyte, Pichau, Amazon, Mercado Livre</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ==================== MODALS ==================== -->
+
+  <!-- 1. Interactive Chart Modal -->
+  <div id="chartModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 sm:p-6 overflow-y-auto bg-slate-950/80 backdrop-blur-md">
+    <div class="glass-modal w-full max-w-4xl rounded-2xl border border-slate-700/80 shadow-2xl p-5 sm:p-7 space-y-6 transform transition-all">
+      
+      <!-- Modal Header -->
+      <div class="flex items-start justify-between gap-4 border-b border-slate-800 pb-4">
+        <div>
+          <div class="flex items-center gap-2">
+            <span id="chartProductCategory" class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-slate-800 text-slate-400"></span>
+            <span id="chartProductBadge" class="px-2 py-0.5 rounded text-[10px] font-bold"></span>
+          </div>
+          <h3 id="chartProductName" class="text-xl sm:text-2xl font-bold text-white mt-1.5">Histórico de Preços</h3>
+          <p id="chartProductSpecs" class="text-xs text-slate-400 mt-0.5"></p>
+        </div>
+        <button onclick="app.closeChartModal()" class="p-2 rounded-xl bg-slate-800/60 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Chart Toolbar Controls -->
+      <div class="flex flex-wrap items-center justify-between gap-4 bg-slate-900/80 p-3 rounded-xl border border-slate-800">
+        
+        <!-- Payment Mode Toggle (PIX vs Cartao) -->
+        <div class="flex items-center gap-1.5 bg-slate-950 p-1 rounded-lg border border-slate-800 text-xs">
+          <button id="btnPriceCash" onclick="app.setChartPriceMode('cash')" class="px-3 py-1.5 rounded-md font-semibold transition-all bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1.5">
+            <i data-lucide="zap" class="w-3.5 h-3.5 text-emerald-400"></i>
+            À Vista (PIX)
+          </button>
+          <button id="btnPriceInstallment" onclick="app.setChartPriceMode('installment')" class="px-3 py-1.5 rounded-md font-semibold transition-all text-slate-400 hover:text-white flex items-center gap-1.5">
+            <i data-lucide="credit-card" class="w-3.5 h-3.5 text-cyan-400"></i>
+            A Prazo (Cartão)
+          </button>
+        </div>
+
+        <!-- Store Colors Legend Indicators -->
+        <div class="flex flex-wrap items-center gap-3 text-xs">
+          <span class="flex items-center gap-1.5 text-slate-300">
+            <span class="w-3 h-3 rounded-full bg-[#FF6500]"></span> Kabum
+          </span>
+          <span class="flex items-center gap-1.5 text-slate-300">
+            <span class="w-3 h-3 rounded-full bg-[#0084FF]"></span> Terabyte
+          </span>
+          <span class="flex items-center gap-1.5 text-slate-300">
+            <span class="w-3 h-3 rounded-full bg-[#E30613]"></span> Pichau
+          </span>
+          <span class="flex items-center gap-1.5 text-slate-300">
+            <span class="w-3 h-3 rounded-full bg-[#FF9900]"></span> Amazon
+          </span>
+          <span class="flex items-center gap-1.5 text-slate-300">
+            <span class="w-3 h-3 rounded-full bg-[#FFE600]"></span> Mercado Livre
+          </span>
+        </div>
+
+      </div>
+
+      <!-- Chart Canvas Container -->
+      <div class="relative w-full h-72 sm:h-80 bg-slate-950/60 rounded-xl p-3 border border-slate-800/80">
+        <canvas id="priceHistoryChart"></canvas>
+      </div>
+
+      <!-- Chart Stat Summary Footer -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+        <div class="p-3 rounded-xl bg-slate-900/60 border border-slate-800">
+          <span class="text-slate-500">Menor Histórico Geral</span>
+          <div id="chartStatLowest" class="text-sm font-bold text-emerald-400 font-mono-numbers mt-1">R$ --,--</div>
+        </div>
+        <div class="p-3 rounded-xl bg-slate-900/60 border border-slate-800">
+          <span class="text-slate-500">Preço Alvo Definido</span>
+          <div id="chartStatTarget" class="text-sm font-bold text-amber-400 font-mono-numbers mt-1">R$ --,--</div>
+        </div>
+        <div class="p-3 rounded-xl bg-slate-900/60 border border-slate-800">
+          <span class="text-slate-500">Média Geral (30d)</span>
+          <div id="chartStatAvg" class="text-sm font-bold text-slate-300 font-mono-numbers mt-1">R$ --,--</div>
+        </div>
+        <div class="p-3 rounded-xl bg-slate-900/60 border border-slate-800">
+          <span class="text-slate-500">Diferença PIX vs Cartão</span>
+          <div id="chartStatDiff" class="text-sm font-bold text-cyan-400 font-mono-numbers mt-1">~10% a 15%</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 2. Manage Store Links Modal -->
+  <div id="linksModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 sm:p-6 overflow-y-auto bg-slate-950/80 backdrop-blur-md">
+    <div class="glass-modal w-full max-w-2xl rounded-2xl border border-slate-700/80 shadow-2xl p-5 sm:p-7 space-y-6 transform transition-all">
+      
+      <!-- Modal Header -->
+      <div class="flex items-start justify-between gap-4 border-b border-slate-800 pb-4">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-blue-500/10 text-blue-400 border border-blue-500/20">
+              Gerenciar Links de Lojas
+            </span>
+          </div>
+          <h3 id="linksModalProductName" class="text-xl font-bold text-white mt-1">Links do Produto</h3>
+          <p class="text-xs text-slate-400 mt-0.5">Adicione URLs das lojas monitoradas para varredura de preços.</p>
+        </div>
+        <button onclick="app.closeLinksModal()" class="p-2 rounded-xl bg-slate-800/60 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Add Link Form -->
+      <form id="addLinkForm" onsubmit="app.handleAddLink(event)" class="bg-slate-900/90 p-4 rounded-xl border border-slate-800 space-y-3">
+        <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400">Adicionar Nova Loja</h4>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label class="block text-[11px] font-medium text-slate-400 mb-1">Loja</label>
+            <select id="newLinkStore" required class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-xs text-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              <option value="Kabum">Kabum</option>
+              <option value="Terabyte">Terabyte</option>
+              <option value="Pichau">Pichau</option>
+              <option value="Amazon">Amazon</option>
+              <option value="Mercado Livre">Mercado Livre</option>
+            </select>
+          </div>
+          <div class="sm:col-span-2">
+            <label class="block text-[11px] font-medium text-slate-400 mb-1">URL do Produto</label>
+            <input 
+              type="url" 
+              id="newLinkUrl" 
+              required 
+              placeholder="https://www.kabum.com.br/produto/..." 
+              class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            >
+          </div>
+        </div>
+        <div class="flex justify-end pt-1">
+          <button type="submit" id="btnAddLinkSubmit" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow transition-all">
+            <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
+            <span>Salvar Link</span>
+          </button>
+        </div>
+      </form>
+
+      <!-- Active Links List -->
+      <div class="space-y-3">
+        <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center justify-between">
+          <span>Lojas Cadastradas</span>
+          <span id="linksCountBadge" class="text-[11px] px-2 py-0.5 rounded bg-slate-800 text-slate-400 font-mono">0 links</span>
+        </h4>
+
+        <div id="linksListContainer" class="space-y-2 max-h-60 overflow-y-auto pr-1">
+          <!-- Injected via JavaScript -->
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 3. Add New Product Modal -->
+  <div id="newProductModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 sm:p-6 overflow-y-auto bg-slate-950/80 backdrop-blur-md">
+    <div class="glass-modal w-full max-w-lg rounded-2xl border border-slate-700/80 shadow-2xl p-5 sm:p-7 space-y-6 transform transition-all">
+      
+      <!-- Modal Header -->
+      <div class="flex items-start justify-between gap-4 border-b border-slate-800 pb-4">
+        <div>
+          <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+            Novo Monitoramento
+          </span>
+          <h3 class="text-xl font-bold text-white mt-1">Cadastrar Produto</h3>
+          <p class="text-xs text-slate-400 mt-0.5">Defina o item e seu preço alvo para alerta de oportunidade.</p>
+        </div>
+        <button onclick="app.closeNewProductModal()" class="p-2 rounded-xl bg-slate-800/60 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Add Product Form -->
+      <form id="newProductForm" onsubmit="app.handleCreateProduct(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-1">Nome do Produto *</label>
+          <input 
+            type="text" 
+            id="newProductName" 
+            required 
+            placeholder="Ex: AMD Ryzen 7 5700X3D" 
+            class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          >
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-medium text-slate-300 mb-1">Categoria *</label>
+            <select id="newProductCategory" required class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              <option value="Processador">Processador</option>
+              <option value="SSD">SSD / Armazenamento</option>
+              <option value="Placa de Vídeo">Placa de Vídeo (GPU)</option>
+              <option value="Memória RAM">Memória RAM</option>
+              <option value="Placa-Mãe">Placa-Mãe</option>
+              <option value="Fonte">Fonte de Alimentação</option>
+              <option value="Monitor">Monitor Gamer</option>
+              <option value="Outro">Outro Hardware</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-300 mb-1">Preço Alvo Desejado (R$) *</label>
+            <div class="relative">
+              <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-xs text-slate-500 font-mono">R$</span>
+              <input 
+                type="number" 
+                step="0.01" 
+                min="1" 
+                id="newProductTargetPrice" 
+                required 
+                placeholder="800.00" 
+                class="w-full pl-9 pr-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white font-mono placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              >
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-1">Especificações Técnicas *</label>
+          <input 
+            type="text" 
+            id="newProductSpecs" 
+            required 
+            placeholder="Ex: 32MB Cache L3, 6 núcleos / 12 threads, AM4" 
+            class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          >
+        </div>
+
+        <!-- Submit & Cancel -->
+        <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-800">
+          <button type="button" onclick="app.closeNewProductModal()" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white transition-colors">
+            Cancelar
+          </button>
+          <button type="submit" id="btnSubmitNewProduct" class="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-lg shadow-emerald-900/30 transition-all">
+            <i data-lucide="check" class="w-4 h-4"></i>
+            <span>Cadastrar Produto</span>
+          </button>
+        </div>
+      </form>
+
+    </div>
+  </div>
+
+  <!-- 4. Confirmation Modal -->
+  <div id="confirmModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 sm:p-6 overflow-y-auto bg-slate-950/80 backdrop-blur-md">
+    <div class="glass-modal w-full max-w-md rounded-2xl border border-slate-700/80 shadow-2xl p-6 space-y-4 transform transition-all text-center">
+      <div class="mx-auto w-12 h-12 rounded-full bg-rose-500/10 border border-rose-500/30 text-rose-400 flex items-center justify-center">
+        <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+      </div>
+      <div>
+        <h3 id="confirmModalTitle" class="text-base font-bold text-white">Confirmar Exclusão</h3>
+        <p id="confirmModalMessage" class="text-xs text-slate-400 mt-1">Tem certeza que deseja executar esta ação?</p>
+      </div>
+      <div class="flex items-center justify-center gap-3 pt-2">
+        <button id="btnCancelConfirm" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300">
+          Cancelar
+        </button>
+        <button id="btnExecuteConfirm" class="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-xs font-bold text-white shadow-lg shadow-rose-900/30">
+          Sim, Excluir
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none">
+    <!-- Toasts injected via app.showToast() -->
+  </div>
+
+  <!-- Application Logic -->
+  <script src="app.js"></script>
+</body>
+</html>
