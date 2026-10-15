@@ -1,4 +1,4 @@
-"""Scraper especializado para a Pichau."""
+"""Scraper especializado para a Pichau com suporte a GraphQL hydration data e Schema.org."""
 import json
 import logging
 import re
@@ -23,7 +23,27 @@ class PichauScraper(BaseScraper):
         in_stock = True
 
         # ==========================================
-        # 1. Scripts JSON-LD (Schema.org)
+        # 1. Extração via dados internos da Pichau (pichau_prices)
+        # ==========================================
+        try:
+            avista_m = re.search(r'pichau_prices.*?avista[^\d]*([0-9]+\.[0-9]+)', html)
+            final_m = re.search(r'pichau_prices.*?final_price[^\d]*([0-9]+\.[0-9]+)', html)
+            max_inst_m = re.search(r'pichau_prices.*?max_installments[^\d]*([0-9]+)', html)
+            min_inst_m = re.search(r'pichau_prices.*?min_installment_price[^\d]*([0-9]+\.[0-9]+)', html)
+
+            if avista_m:
+                price_cash = float(avista_m.group(1))
+            if final_m:
+                price_installment = float(final_m.group(1))
+            if max_inst_m and min_inst_m:
+                t = int(max_inst_m.group(1))
+                val = float(min_inst_m.group(1))
+                installments_text = f"{t}x de R$ {val:,.2f} sem juros".replace(",", "X").replace(".", ",").replace("X", ".")
+        except Exception as e:
+            logger.debug(f"Erro ao ler regex pichau_prices: {e}")
+
+        # ==========================================
+        # 2. Scripts JSON-LD (Schema.org)
         # ==========================================
         for script in soup.find_all("script", type="application/ld+json"):
             if script.string:
@@ -37,18 +57,18 @@ class PichauScraper(BaseScraper):
                         if isinstance(offers, list):
                             offers = offers[0]
                         price_val = offers.get("price")
-                        if price_val:
+                        if not price_cash and price_val:
                             price_cash = self.parse_brl(str(price_val))
                         avail = offers.get("availability", "")
                         if "OutOfStock" in avail:
                             in_stock = False
                         elif "InStock" in avail:
                             in_stock = True
-                except Exception:
+                except Exception as e:
                     pass
 
         # ==========================================
-        # 2. Seletores de texto/classes com menção a PIX
+        # 3. Título e Seletores de Texto
         # ==========================================
         if not title:
             title_el = soup.find("h1")
@@ -68,13 +88,14 @@ class PichauScraper(BaseScraper):
                 price_cash = self.parse_brl(cash_el.get_text())
 
         # Parcelamento
-        inst_block = soup.find(string=re.compile(r"[0-9]{1,2}x\s*(?:de\s*)?R\$", re.I))
-        if inst_block:
-            inst_val, inst_txt = self.extract_installments(str(inst_block.parent))
-            if inst_txt:
-                installments_text = inst_txt
-            if inst_val:
-                price_installment = inst_val
+        if not installments_text:
+            inst_block = soup.find(string=re.compile(r"[0-9]{1,2}x\s*(?:de\s*)?R\$", re.I))
+            if inst_block:
+                inst_val, inst_txt = self.extract_installments(str(inst_block.parent))
+                if inst_txt:
+                    installments_text = inst_txt
+                if not price_installment and inst_val:
+                    price_installment = inst_val
 
         if price_cash and not price_installment:
             price_installment = round(price_cash * 1.15, 2)
@@ -82,8 +103,8 @@ class PichauScraper(BaseScraper):
             times = 12
             installments_text = f"{times}x de R$ {price_installment/times:.2f} sem juros".replace(".", ",")
 
-        # Verificação de estoque
-        if "produto esgotado" in html.lower() or "indisponível" in html.lower() or "avise-me" in html.lower():
+        # Verificação textual de estoque
+        if "produto esgotado" in html.lower() or "indisponível" in html.lower() or "avise-me" in html.lower() or "avise me" in html.lower() or "OutOfStock" in html:
             in_stock = False
 
         if price_cash:
