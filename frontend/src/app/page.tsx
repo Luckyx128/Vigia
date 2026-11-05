@@ -8,6 +8,12 @@ import {
   ProductGrid,
   BlackFridayLegend,
 } from '@/components/dashboard';
+import {
+  NewProductModal,
+  StoreLinksModal,
+  HistoryModal,
+} from '@/components/modals';
+import { Toaster, toast } from 'sonner';
 import { productService, monitorService } from '@/services';
 import type { ProductWithStats, StatsOverviewResponse } from '@/types';
 
@@ -17,6 +23,11 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(true);
   const [isScraping, setIsScraping] = useState(false);
   const [scrapingId, setScrapingId] = useState<number | null>(null);
+
+  // Estados dos Modais
+  const [isNewProductOpen, setIsNewProductOpen] = useState(false);
+  const [selectedProductForLinks, setSelectedProductForLinks] = useState<ProductWithStats | null>(null);
+  const [selectedProductForHistory, setSelectedProductForHistory] = useState<ProductWithStats | null>(null);
 
   // Filtros e busca
   const [searchQuery, setSearchQuery] = useState('');
@@ -33,8 +44,8 @@ export default function Home() {
       ]);
       setProducts(prodsData);
       setStats(statsData);
-    } catch (error) {
-      console.error('Falha ao carregar dados:', error);
+    } catch (error: any) {
+      toast.error(`Falha ao carregar catálogo: ${error.message}`);
     } finally {
       setIsLoading(false);
     }
@@ -47,9 +58,9 @@ export default function Home() {
   const handleTestNotch = async () => {
     try {
       const res = await monitorService.testNotify();
-      alert(`Notch Cortinho: ${res.message}`);
+      toast.success(res.message);
     } catch (err: any) {
-      alert(`Erro ao testar Notch: ${err.message}`);
+      toast.error(`Erro ao testar Notch: ${err.message}`);
     }
   };
 
@@ -57,12 +68,12 @@ export default function Home() {
     try {
       setIsScraping(true);
       const res = await monitorService.scrapeAll();
-      alert(
-        `Varredura concluída!\n${res.success_count}/${res.total_scraped} lojas atualizadas com sucesso.`
+      toast.success(
+        `Varredura concluída! ${res.success_count}/${res.total_scraped} lojas atualizadas.`
       );
       await loadData();
     } catch (err: any) {
-      alert(`Erro na varredura: ${err.message}`);
+      toast.error(`Erro na varredura: ${err.message}`);
     } finally {
       setIsScraping(false);
     }
@@ -71,44 +82,29 @@ export default function Home() {
   const handleScrapeSingle = async (productId: number) => {
     try {
       setScrapingId(productId);
-      const res = await monitorService.scrapeProduct(productId);
-      alert(`Produto #${productId} atualizado com sucesso!`);
+      await monitorService.scrapeProduct(productId);
+      toast.success('Preços atualizados com sucesso!');
       await loadData();
     } catch (err: any) {
-      alert(`Erro ao atualizar produto: ${err.message}`);
+      toast.error(`Erro ao atualizar produto: ${err.message}`);
     } finally {
       setScrapingId(null);
     }
-  };
-
-  const handleViewHistory = (product: ProductWithStats) => {
-    alert(`Histórico do produto ${product.name} (será aberto no modal com Chart.js na Etapa 4).`);
-  };
-
-  const handleManageLinks = (product: ProductWithStats) => {
-    alert(`Gerenciar links do produto ${product.name} (será aberto no modal na Etapa 4).`);
-  };
-
-  const handleOpenNewProduct = () => {
-    alert('Modal de Novo Produto será integrado na Etapa 4.');
   };
 
   // Filtragem e Ordenação reativa
   const filteredProducts = useMemo(() => {
     return products
       .filter((product) => {
-        // Busca textual
         const matchesQuery =
           !searchQuery ||
           product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
           (product.specs && product.specs.toLowerCase().includes(searchQuery.toLowerCase())) ||
           (product.category && product.category.toLowerCase().includes(searchQuery.toLowerCase()));
 
-        // Categoria
         const matchesCategory =
           selectedCategory === 'all' || product.category === selectedCategory;
 
-        // Selos
         let matchesDeal = true;
         if (selectedDeal === 'real') {
           matchesDeal = Boolean(product.is_real_discount);
@@ -140,10 +136,12 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
+      <Toaster position="bottom-right" richColors theme="system" />
+
       <Header
         onTestNotch={handleTestNotch}
         onScrapeAll={handleScrapeAll}
-        onOpenNewProduct={handleOpenNewProduct}
+        onOpenNewProduct={() => setIsNewProductOpen(true)}
         isScraping={isScraping}
       />
 
@@ -177,8 +175,8 @@ export default function Home() {
           <ProductGrid
             products={filteredProducts}
             isLoading={isLoading}
-            onViewHistory={handleViewHistory}
-            onManageLinks={handleManageLinks}
+            onViewHistory={(p) => setSelectedProductForHistory(p)}
+            onManageLinks={(p) => setSelectedProductForLinks(p)}
             onScrapeSingle={handleScrapeSingle}
             scrapingId={scrapingId}
           />
@@ -187,6 +185,30 @@ export default function Home() {
         {/* Legenda de Selos Black Friday */}
         <BlackFridayLegend />
       </main>
+
+      {/* Modais Integrados */}
+      <NewProductModal
+        isOpen={isNewProductOpen}
+        onClose={() => setIsNewProductOpen(false)}
+        onSuccess={() => {
+          toast.success('Produto cadastrado com sucesso!');
+          loadData();
+        }}
+      />
+
+      <StoreLinksModal
+        product={selectedProductForLinks}
+        isOpen={Boolean(selectedProductForLinks)}
+        onClose={() => setSelectedProductForLinks(null)}
+        onUpdated={loadData}
+      />
+
+      <HistoryModal
+        product={selectedProductForHistory}
+        isOpen={Boolean(selectedProductForHistory)}
+        onClose={() => setSelectedProductForHistory(null)}
+        onUpdated={loadData}
+      />
     </div>
   );
 }
