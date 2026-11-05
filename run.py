@@ -263,8 +263,23 @@ def main():
     parser.add_argument("--host", type=str, default="127.0.0.1", help="Host do servidor (default: 127.0.0.1)")
     parser.add_argument("--port", type=int, default=8000, help="Porta do servidor (default: 8000)")
     parser.add_argument("--reload", action="store_true", default=False, help="Habilita auto-reload no uvicorn")
+    parser.add_argument("--dev", action="store_true", help="Inicia o backend FastAPI e o frontend Next.js simultaneamente")
 
     args = parser.parse_args()
+
+    if args.dev:
+        import subprocess
+        frontend_dir = Path(__file__).resolve().parent / "frontend"
+        print("Iniciando Vigia Fullstack (Backend FastAPI + Frontend Next.js)...")
+        print("  - Backend:  http://127.0.0.1:8000")
+        print("  - Frontend: http://localhost:3000")
+        frontend_proc = subprocess.Popen(["npm", "run", "dev"], cwd=frontend_dir, shell=True)
+        import uvicorn
+        try:
+            uvicorn.run("vigia.api:app", host=args.host, port=args.port, reload=args.reload)
+        finally:
+            frontend_proc.terminate()
+        return
 
     if args.test:
         success = run_tests()
