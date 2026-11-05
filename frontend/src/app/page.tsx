@@ -12,7 +12,10 @@ import {
   NewProductModal,
   StoreLinksModal,
   HistoryModal,
+  BackgroundModal,
 } from '@/components/modals';
+import Balatro from '@/components/ui/Balatro';
+import { useBackground } from '@/context/background-context';
 import { Toaster, toast } from 'sonner';
 import { productService, monitorService } from '@/services';
 import type { ProductWithStats, StatsOverviewResponse } from '@/types';
@@ -24,8 +27,12 @@ export default function Home() {
   const [isScraping, setIsScraping] = useState(false);
   const [scrapingId, setScrapingId] = useState<number | null>(null);
 
+  // Background selecionado pelo contexto
+  const { background } = useBackground();
+
   // Estados dos Modais
   const [isNewProductOpen, setIsNewProductOpen] = useState(false);
+  const [isBackgroundModalOpen, setIsBackgroundModalOpen] = useState(false);
   const [selectedProductForLinks, setSelectedProductForLinks] = useState<ProductWithStats | null>(null);
   const [selectedProductForHistory, setSelectedProductForHistory] = useState<ProductWithStats | null>(null);
 
@@ -135,56 +142,85 @@ export default function Home() {
   }, [products, searchQuery, selectedCategory, selectedDeal, sortOrder]);
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col">
+    <div className="relative min-h-screen bg-background text-foreground flex flex-col overflow-x-hidden">
+      {/* Background Animado Condicional */}
+      {background === 'balatro' && (
+        <div className="fixed inset-0 pointer-events-none z-0 opacity-40">
+          <Balatro
+            color1="#DE443B"
+            color2="#006BB4"
+            color3="#162325"
+            swirl={0.25}
+            pixelSize={1.5}
+            mouseInteraction
+            contrast={3.5}
+            lighting={0.4}
+            speed={1}
+            rotationSpeed={0}
+            scale={1}
+            detail={5}
+            crt={0}
+            mouseStrength={1}
+            clickSwirl
+            intro
+            lightMode={false}
+          />
+        </div>
+      )}
+
       <Toaster position="bottom-right" richColors theme="system" />
 
-      <Header
-        onTestNotch={handleTestNotch}
-        onScrapeAll={handleScrapeAll}
-        onOpenNewProduct={() => setIsNewProductOpen(true)}
-        isScraping={isScraping}
-      />
-
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-6">
-        {/* Cards de Resumo de KPIs */}
-        <KpiSummary stats={stats} products={products} isLoading={isLoading} />
-
-        {/* Barra de Busca, Filtros e Ordenação */}
-        <ProductFilters
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          selectedCategory={selectedCategory}
-          onCategoryChange={setSelectedCategory}
-          selectedDeal={selectedDeal}
-          onDealChange={setSelectedDeal}
-          sortOrder={sortOrder}
-          onSortChange={setSortOrder}
+      {/* Conteúdo da Aplicação sobreposto */}
+      <div className="relative z-10 flex flex-col flex-1">
+        <Header
+          onTestNotch={handleTestNotch}
+          onScrapeAll={handleScrapeAll}
+          onOpenNewProduct={() => setIsNewProductOpen(true)}
+          onOpenBackgroundModal={() => setIsBackgroundModalOpen(true)}
+          isScraping={isScraping}
         />
 
-        {/* Grid de Cards de Produtos Monitorados */}
-        <section className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-base font-bold text-foreground flex items-center gap-2">
-              <span>Produtos Monitorados</span>
-              <span className="text-xs px-2 py-0.5 rounded-md bg-muted text-muted-foreground font-mono">
-                {filteredProducts.length}
-              </span>
-            </h2>
-          </div>
+        <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-6">
+          {/* Cards de Resumo de KPIs */}
+          <KpiSummary stats={stats} products={products} isLoading={isLoading} />
 
-          <ProductGrid
-            products={filteredProducts}
-            isLoading={isLoading}
-            onViewHistory={(p) => setSelectedProductForHistory(p)}
-            onManageLinks={(p) => setSelectedProductForLinks(p)}
-            onScrapeSingle={handleScrapeSingle}
-            scrapingId={scrapingId}
+          {/* Barra de Busca, Filtros e Ordenação */}
+          <ProductFilters
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            selectedCategory={selectedCategory}
+            onCategoryChange={setSelectedCategory}
+            selectedDeal={selectedDeal}
+            onDealChange={setSelectedDeal}
+            sortOrder={sortOrder}
+            onSortChange={setSortOrder}
           />
-        </section>
 
-        {/* Legenda de Selos Black Friday */}
-        <BlackFridayLegend />
-      </main>
+          {/* Grid de Cards de Produtos Monitorados */}
+          <section className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-base font-bold text-foreground flex items-center gap-2">
+                <span>Produtos Monitorados</span>
+                <span className="text-xs px-2 py-0.5 rounded-md bg-muted text-muted-foreground font-mono">
+                  {filteredProducts.length}
+                </span>
+              </h2>
+            </div>
+
+            <ProductGrid
+              products={filteredProducts}
+              isLoading={isLoading}
+              onViewHistory={(p) => setSelectedProductForHistory(p)}
+              onManageLinks={(p) => setSelectedProductForLinks(p)}
+              onScrapeSingle={handleScrapeSingle}
+              scrapingId={scrapingId}
+            />
+          </section>
+
+          {/* Legenda de Selos Black Friday */}
+          <BlackFridayLegend />
+        </main>
+      </div>
 
       {/* Modais Integrados */}
       <NewProductModal
@@ -208,6 +244,11 @@ export default function Home() {
         isOpen={Boolean(selectedProductForHistory)}
         onClose={() => setSelectedProductForHistory(null)}
         onUpdated={loadData}
+      />
+
+      <BackgroundModal
+        isOpen={isBackgroundModalOpen}
+        onClose={() => setIsBackgroundModalOpen(false)}
       />
     </div>
   );

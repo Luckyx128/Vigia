@@ -1,6 +1,6 @@
 'use client';
 
-import { BellRing, RefreshCw, Plus } from 'lucide-react';
+import { BellRing, RefreshCw, Plus, Palette } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/theme-toggle';
 
@@ -8,6 +8,7 @@ interface HeaderProps {
   onTestNotch: () => void;
   onScrapeAll: () => void;
   onOpenNewProduct: () => void;
+  onOpenBackgroundModal: () => void;
   isScraping?: boolean;
 }
 
@@ -15,6 +16,7 @@ export function Header({
   onTestNotch,
   onScrapeAll,
   onOpenNewProduct,
+  onOpenBackgroundModal,
   isScraping = false,
 }: HeaderProps) {
   return (
@@ -51,6 +53,18 @@ export function Header({
           >
             <Plus className="w-4 h-4" />
             <span>Novo Produto</span>
+          </Button>
+
+          {/* Botão de Personalização de Background */}
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={onOpenBackgroundModal}
+            className="h-8 w-8 text-xs text-muted-foreground hover:text-foreground"
+            title="Personalizar Fundo"
+          >
+            <Palette className="h-4 w-4 text-purple-400" />
+            <span className="sr-only">Personalizar Fundo</span>
           </Button>
 
           {/* Theme Toggle (Escuro / Claro / Sistema) */}
