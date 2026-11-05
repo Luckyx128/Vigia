@@ -25,8 +25,33 @@ import {
   Title,
   Tooltip,
   Legend,
+  Plugin,
 } from 'chart.js';
 import { Line } from 'react-chartjs-2';
+
+// Plugin para desenhar a linha vertical guia (crosshair vertical)
+const verticalLinePlugin: Plugin<'line'> = {
+  id: 'verticalLineOnHover',
+  afterDraw: (chart) => {
+    const activeElements = chart.tooltip?.getActiveElements();
+    if (activeElements && activeElements.length > 0) {
+      const activePoint = activeElements[0];
+      const { ctx } = chart;
+      const { x } = activePoint.element;
+      const { top, bottom } = chart.chartArea;
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.setLineDash([4, 4]);
+      ctx.moveTo(x, top);
+      ctx.lineTo(x, bottom);
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+      ctx.stroke();
+      ctx.restore();
+    }
+  },
+};
 
 ChartJS.register(
   CategoryScale,
@@ -35,7 +60,8 @@ ChartJS.register(
   LineElement,
   Title,
   Tooltip,
-  Legend
+  Legend,
+  verticalLinePlugin
 );
 
 interface HistoryModalProps {
@@ -97,29 +123,63 @@ export function HistoryModal({
     }
   };
 
-  // Construir dados do Chart.js
+  // Construir dados do Chart.js agrupando varreduras simultâneas na mesma coluna
   const chartConfig = useMemo(() => {
     if (!historyData || historyData.records.length === 0) return null;
 
-    // Obter datas únicas ordenadas
-    const rawDates = Array.from(
-      new Set(historyData.records.map((r) => r.scraped_at))
-    ).sort();
+    // Ordenar registros cronologicamente
+    const sortedRecords = [...historyData.records].sort(
+      (a, b) => new Date(a.scraped_at).getTime() - new Date(b.scraped_at).getTime()
+    );
 
-    const formattedLabels = rawDates.map((d) => {
-      const date = new Date(d);
-      return isNaN(date.getTime())
-        ? d
-        : date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
-    });
+    // Agrupar leituras que aconteceram na mesma rodada/varredura (janela de até 2 minutos)
+    const BATCH_WINDOW_MS = 2 * 60 * 1000;
+    interface BatchGroup {
+      timestamp: number;
+      label: string;
+      stores: Record<string, HistoryRecord>;
+    }
+
+    const batches: BatchGroup[] = [];
+
+    for (const record of sortedRecords) {
+      const recordTime = new Date(record.scraped_at).getTime();
+
+      const existingBatch = batches.find(
+        (b) =>
+          Math.abs(b.timestamp - recordTime) <= BATCH_WINDOW_MS &&
+          !b.stores[record.store_name]
+      );
+
+      if (existingBatch) {
+        existingBatch.stores[record.store_name] = record;
+      } else {
+        const d = new Date(record.scraped_at);
+        const label = isNaN(d.getTime())
+          ? record.scraped_at
+          : d.toLocaleDateString('pt-BR', {
+              day: '2-digit',
+              month: '2-digit',
+              hour: '2-digit',
+              minute: '2-digit',
+            });
+
+        batches.push({
+          timestamp: recordTime,
+          label,
+          stores: { [record.store_name]: record },
+        });
+      }
+    }
+
+    const labels = batches.map((b) => b.label);
 
     const datasets = historyData.stores.map((store) => {
-      const storeColor = STORE_COLORS[store]?.text.replace('text-[', '').replace(']', '') || '#3b82f6';
+      const storeColor =
+        STORE_COLORS[store]?.text.replace('text-[', '').replace(']', '') || '#3b82f6';
 
-      const data = rawDates.map((dateStr) => {
-        const record = historyData.records.find(
-          (r) => r.scraped_at === dateStr && r.store_name === store
-        );
+      const data = batches.map((batch) => {
+        const record = batch.stores[store];
         if (!record) return null;
         return priceMode === 'cash' ? record.price_cash : record.price_installment;
       });
@@ -137,7 +197,7 @@ export function HistoryModal({
     });
 
     return {
-      labels: formattedLabels,
+      labels,
       datasets,
     };
   }, [historyData, priceMode]);
@@ -206,9 +266,14 @@ export function HistoryModal({
               options={{
                 responsive: true,
                 maintainAspectRatio: false,
+                interaction: {
+                  mode: 'index',
+                  intersect: false,
+                },
                 plugins: {
                   legend: { position: 'top' as const, labels: { boxWidth: 12, font: { size: 11 } } },
                   tooltip: {
+                    position: 'nearest',
                     callbacks: {
                       label: (context) => ` ${context.dataset.label}: R$ ${Number(context.raw).toFixed(2)}`,
                     },
