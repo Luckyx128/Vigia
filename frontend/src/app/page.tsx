@@ -68,25 +68,9 @@ export default function Home() {
         isScraping={isScraping}
       />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-8">
-        <section className="space-y-6">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground flex items-center gap-3">
-                Painel de Monitoramento
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
-                  Ao Vivo
-                </span>
-              </h1>
-              <p className="text-sm text-muted-foreground mt-1">
-                Acompanhamento contínuo de hardware com detecção de descontos autênticos e proteção contra a &quot;metade do dobro&quot;.
-              </p>
-            </div>
-          </div>
-
-          {/* Cards de Resumo de KPIs */}
-          <KpiSummary stats={stats} products={products} isLoading={isLoading} />
-        </section>
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-6">
+        {/* Cards de Resumo de KPIs direto no topo */}
+        <KpiSummary stats={stats} products={products} isLoading={isLoading} />
       </main>
     </div>
   );
