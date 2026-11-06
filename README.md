@@ -111,13 +111,13 @@ cd ..
 ```
 
 ### 4. Executar o Projeto (Modo Fullstack)
-Com um único comando você inicia a API FastAPI na porta `8000` e o painel Next.js na porta `3000`:
+Com um único comando você inicia a API FastAPI na porta `8000` e o painel Next.js na porta `3001`:
 ```bash
 python run.py --dev
 ```
 
 Acesse no seu navegador:
-- **Painel Web (Frontend):** [http://localhost:3000](http://localhost:3000)
+- **Painel Web (Frontend):** [http://localhost:3001](http://localhost:3001)
 - **Documentação Interativa da API (Swagger):** [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
 
 ---

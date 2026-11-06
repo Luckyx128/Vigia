@@ -273,7 +273,7 @@ def main():
         frontend_dir = Path(__file__).resolve().parent / "frontend"
         print("Iniciando Vigia Fullstack (Backend FastAPI + Frontend Next.js)...")
         print("  - Backend:  http://127.0.0.1:8000")
-        print("  - Frontend: http://localhost:3000")
+        print("  - Frontend: http://localhost:3001")
         frontend_proc = subprocess.Popen(["npm", "run", "dev"], cwd=frontend_dir, shell=(os.name == "nt"))
         import uvicorn
         try:
