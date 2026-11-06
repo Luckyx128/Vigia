@@ -1,9 +1,9 @@
 'use client';
 
-import { ExternalLink, LineChart, Link as LinkIcon, RefreshCw } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
+import { LineChart, Link as LinkIcon, RefreshCw } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import SpotlightCard from '@/components/ui/SpotlightCard';
 import { getStoreStyle } from '@/lib/constants';
 import type { ProductWithStats } from '@/types';
 
@@ -33,9 +33,27 @@ export function ProductCard({
     product.lowest_price_now &&
     product.lowest_price_now <= product.target_price;
 
+  // Cor do holofote baseada no status de oferta
+  const spotlightColor = product.is_real_discount
+    ? '#10b981' // Esmeralda para Preço Real
+    : isBelowTarget
+    ? '#f59e0b' // Âmbar para Na Meta
+    : '#06b6d4'; // Ciano para Normal
+
   return (
-    <Card className="flex flex-col justify-between overflow-hidden border-border bg-card/75 backdrop-blur-md hover:border-primary/40 transition-all shadow-sm">
-      <CardContent className="p-5 space-y-4">
+    <SpotlightCard
+      spotlightColor={spotlightColor}
+      intensity={0.2}
+      spotlightSize={300}
+      softness={0.7}
+      shape="circle"
+      borderGlow={0.65}
+      proximity={85}
+      smoothing={0.25}
+      flare
+      className="flex flex-col justify-between border border-border/80 bg-card/75 backdrop-blur-md hover:border-primary/50 transition-all shadow-sm rounded-2xl"
+    >
+      <div className="p-5 space-y-4 flex-1">
         {/* Header do Card: Categoria & Selo */}
         <div className="flex items-center justify-between gap-2">
           <Badge variant="outline" className="text-[11px] font-semibold">
@@ -64,7 +82,7 @@ export function ProductCard({
         </div>
 
         {/* Bloco de Preço Destaque */}
-        <div className="p-3.5 rounded-xl bg-muted/50 border border-border space-y-2">
+        <div className="p-3.5 rounded-xl bg-muted/50 border border-border/70 space-y-2">
           <div className="flex items-baseline justify-between">
             <span className="text-xs text-muted-foreground">Menor Preço Atual</span>
             {product.lowest_store_now && (
@@ -89,23 +107,23 @@ export function ProductCard({
 
         {/* Métricas Secundárias: Menor Histórico vs Preço Alvo */}
         <div className="grid grid-cols-2 gap-2 text-xs">
-          <div className="p-2 rounded-lg bg-muted/30 border border-border">
+          <div className="p-2 rounded-lg bg-muted/30 border border-border/60">
             <span className="text-muted-foreground text-[10px]">Menor Histórico</span>
             <div className="font-mono font-semibold text-foreground mt-0.5">
               {formatBRL(product.all_time_low)}
             </div>
           </div>
-          <div className="p-2 rounded-lg bg-muted/30 border border-border">
+          <div className="p-2 rounded-lg bg-muted/30 border border-border/60">
             <span className="text-muted-foreground text-[10px]">Preço Alvo</span>
             <div className="font-mono font-semibold text-amber-400 mt-0.5">
               {formatBRL(product.target_price)}
             </div>
           </div>
         </div>
-      </CardContent>
+      </div>
 
       {/* Ações do Card */}
-      <div className="border-t border-border p-3 bg-muted/20 flex items-center justify-between gap-2">
+      <div className="border-t border-border/80 p-3 bg-muted/20 flex items-center justify-between gap-2 mt-auto">
         <Button
           variant="outline"
           size="sm"
@@ -138,6 +156,6 @@ export function ProductCard({
           <RefreshCw className={`w-3.5 h-3.5 ${isScraping ? 'animate-spin' : ''}`} />
         </Button>
       </div>
-    </Card>
+    </SpotlightCard>
   );
 }

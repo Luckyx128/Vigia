@@ -38,43 +38,47 @@ export function KpiSummary({ stats, products, isLoading = false }: KpiSummaryPro
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      {/* KPI 1: Total Produtos */}
+      {/* KPI 1: Total Produtos - Ciano */}
       <KpiCard
         title="Produtos Rastreados"
         value={stats?.total_products ?? products.length}
         subtitle={`em ${stats?.total_links ?? 0} lojas ativas`}
         footerText="Monitoramento 24/7 ativo"
         icon={<Cpu className="w-5 h-5 text-cyan-400" />}
+        spotlightColor="#06b6d4"
         isLoading={isLoading}
       />
 
-      {/* KPI 2: Menor Preço Registrado */}
+      {/* KPI 2: Menor Preço Registrado - Esmeralda */}
       <KpiCard
         title="Menor Preço Registrado"
         value={lowestPriceFormatted}
         subtitle={bestProduct ? `na ${bestProduct.lowest_store_now}` : undefined}
         footerText={bestProduct ? bestProduct.name : 'Aguardando dados...'}
         icon={<TrendingDown className="w-5 h-5 text-emerald-400" />}
+        spotlightColor="#10b981"
         isLoading={isLoading}
       />
 
-      {/* KPI 3: Alertas na Meta */}
+      {/* KPI 3: Alertas na Meta - Âmbar */}
       <KpiCard
         title="Alertas na Meta"
         value={stats?.all_time_low_deals_count ?? 0}
         subtitle="produtos abaixo do alvo"
         footerText="Gatilho direto para Notch"
         icon={<Target className="w-5 h-5 text-amber-400" />}
+        spotlightColor="#f59e0b"
         isLoading={isLoading}
       />
 
-      {/* KPI 4: Desconto Médio */}
+      {/* KPI 4: Desconto Médio - Roxo */}
       <KpiCard
         title="Desconto Médio Black"
         value={`${avgDiscount}%`}
         subtitle="vs média de 30 dias"
         footerText="Preço limpo de maquiagem"
         icon={<Flame className="w-5 h-5 text-purple-400" />}
+        spotlightColor="#a855f7"
         isLoading={isLoading}
       />
     </div>
