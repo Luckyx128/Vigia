@@ -50,7 +50,7 @@ def run_tests():
     )
 
     # 1. Teste de Parsing de Moeda BRL e Parcelamento
-    print("\n[1/6] Testando utilitários do BaseScraper (BRL e Parcelas)...")
+    print("\n[1/7] Testando utilitários do BaseScraper (BRL e Parcelas)...")
     assert BaseScraper.parse_brl("R$ 1.234,56") == 1234.56, "Falha no parse R$ 1.234,56"
     assert BaseScraper.parse_brl("R$\xa0829,99") == 829.99, "Falha no parse com non-breaking space"
     assert BaseScraper.parse_brl("1.349,00") == 1349.00, "Falha no parse 1.349,00"
@@ -64,7 +64,7 @@ def run_tests():
     print("  [OK] Parse de BRL e parcelamento validado com sucesso!")
 
     # 2. Teste do Despachante e Scrapers Especializados com Fallback Resiliente
-    print("\n[2/6] Testando despachante de scrapers para as 5 lojas...")
+    print("\n[2/7] Testando despachante de scrapers para as 5 lojas...")
     stores_to_test = [
         ("Kabum", "https://www.kabum.com.br/produto/320797/ryzen-5-5600"),
         ("Terabyte", "https://www.terabyteshop.com.br/produto/20788/ryzen-5-5600"),
@@ -85,7 +85,7 @@ def run_tests():
         print(f"  [OK] {store_name}: R$ {res.price_cash:.2f} (PIX) / R$ {res.price_installment:.2f} ({res.installments_text})")
 
     # 3. Teste do Banco de Dados SQLite em arquivo temporário
-    print("\n[3/6] Testando Banco de Dados SQLite e CRUD...")
+    print("\n[3/7] Testando Banco de Dados SQLite e CRUD...")
     with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as tmp:
         test_db_path = Path(tmp.name)
 
@@ -142,7 +142,7 @@ def run_tests():
             test_db_path.unlink()
 
     # 4. Teste do Seed de Dados e Banco Oficial
-    print("\n[4/6] Validando Seed inicial no banco isolado de teste...")
+    print("\n[4/7] Validando Seed inicial no banco isolado de teste...")
     test_seed_db = Path(tempfile.gettempdir()) / "test_seed_vigia.db"
     if test_seed_db.exists():
         test_seed_db.unlink()
@@ -160,7 +160,7 @@ def run_tests():
             test_seed_db.unlink()
 
     # 5. Teste de Notificação na Notch do Cortinho
-    print("\n[5/6] Testando notificação na Notch local (http://127.0.0.1:48123/notify/)...")
+    print("\n[5/7] Testando notificação na Notch local (http://127.0.0.1:48123/notify/)...")
     sent = notify_notch("Vigia: Teste de integração do Harvester executado com sucesso!", kind="success")
     if sent:
         print("  [OK] Notificação enviada e confirmada pelo servidor local da Notch (HTTP 200 OK)!")
@@ -168,7 +168,7 @@ def run_tests():
         print("  [AVISO] Servidor Notch não respondeu no momento (verifique se está ativo na porta 48123).")
 
     # 6. Teste da API FastAPI e Endpoints do Contrato
-    print("\n[6/6] Testando Endpoints FastAPI contra contracts.md...")
+    print("\n[6/7] Testando Endpoints FastAPI contra contracts.md...")
     with TestClient(app) as client:
         # GET /api/products
         res = client.get("/api/products")
@@ -249,6 +249,91 @@ def run_tests():
         scrape_all_res = client.post("/api/scrape/all")
         assert scrape_all_res.status_code == 200, "POST /api/scrape/all falhou"
         print("  [OK] POST /api/scrape/all: OK")
+
+    # 7. Busca de links (offline, com HTML de exemplo da Kabum)
+    print("\n[7/7] Testando busca de links e nota de semelhança...")
+    import json
+    from vigia.link_search import link_key, score_candidate
+    from vigia.scrapers.kabum import KabumScraper
+
+    now = 1_800_000_000
+    items = [
+        {
+            "code": 1, "name": "Placa de Vídeo RX 7600  8GB", "friendlyName": "placa-rx-7600",
+            "price": 2000.0, "priceWithDiscount": 1700.0, "maxInstallment": "10x de R$ 180,00",
+            "available": True, "sellerName": "KaBuM!", "flags": {"isMarketplace": False},
+            "offer": {"name": "NINJA FRIDAY", "price": 1800.0, "priceWithDiscount": 1500.0, "endsAt": now + 3600},
+        },
+        {
+            "code": 2, "name": "Placa RX 7600 XT 16GB", "friendlyName": "placa-rx-7600-xt",
+            "price": 2500.0, "priceWithDiscount": 2200.0, "available": False, "sellerName": "Loja X",
+            "flags": {"isMarketplace": True},
+            "offer": {"name": "VENCIDA", "price": 1.0, "priceWithDiscount": 1.0, "endsAt": now - 10},
+        },
+        {"code": 3, "name": "Sem preço"},
+    ]
+    next_data = {"props": {"pageProps": {"data": json.dumps({"catalogServer": {"data": items}})}}}
+    html = f'<script id="__NEXT_DATA__" type="application/json">{json.dumps(next_data)}</script>'
+    found = KabumScraper.parse_search_html(html, now=now)
+    assert len(found) == 2, f"Esperado 2 candidatos (item sem preço descartado), obteve {len(found)}"
+    a, b = found
+    assert a.price_cash == 1500.0 and a.offer_name == "NINJA FRIDAY", "Oferta ativa deveria valer"
+    assert a.title == "Placa de Vídeo RX 7600 8GB", f"Título não normalizado: {a.title!r}"
+    assert a.url == "https://www.kabum.com.br/produto/1/placa-rx-7600"
+    assert a.installments_text == "10x de R$ 180,00 sem juros"
+    assert b.price_cash == 2200.0 and b.offer_name is None, "Oferta vencida não deveria valer"
+    assert b.is_marketplace and not b.in_stock
+    print("  [OK] Parsing da busca da Kabum (oferta ativa/vencida, marketplace, estoque)")
+
+    assert score_candidate("rx 7600 8gb", "Placa de Vídeo RX 7600 8GB GDDR6") == (100, [])
+    sc, diff = score_candidate("rx 7600", "Placa de Vídeo RX 7600 XT 16GB")
+    assert diff == ["XT"] and sc == 75, f"XT não detectado: {sc} {diff}"
+    sc, diff = score_candidate("ryzen 5 5600", "Processador AMD Ryzen 5 5600X")
+    assert "5600X" in diff, f"5600X não detectado: {diff}"
+    sc_wrong, _ = score_candidate("ryzen 5 5600", "Processador AMD Ryzen 5 5500")
+    assert sc_wrong < 60, f"Modelo errado com nota alta: {sc_wrong}"
+    _, diff = score_candidate("rx 7600", "PC Gamer Ryzen 5 5500, RX 7600 8 GB")
+    assert "PC completo" in diff, f"PC completo não detectado: {diff}"
+    _, diff = score_candidate("ryzen 5 8500g", "Processador AMD Ryzen 5 8500G + Placa Mãe ASUS")
+    assert "Combo" in diff, f"Combo não detectado: {diff}"
+    print("  [OK] Nota de semelhança (modelo, XT, 5600X, PC completo, combo)")
+
+    assert link_key("https://www.kabum.com.br/produto/459144/qualquer-nome?utm=x") == "kabum:459144"
+    assert link_key("https://www.kabum.com.br/produto/459144") == "kabum:459144"
+    print("  [OK] Identificação de links já monitorados")
+
+    # Busca redirecionada para a categoria errada: tenta de novo sem "AMD"
+    import vigia.link_search as link_search_mod
+    from vigia.scrapers.base import SearchCandidate
+
+    class FakeScraper:
+        supports_search = True
+        calls = []
+
+        def search(self, q):
+            self.calls.append(q)
+            if q.lower().startswith("amd"):
+                return [SearchCandidate("Kabum", "Placa de Vídeo RX 7600", "https://www.kabum.com.br/produto/1/gpu", price_cash=1.0)]
+            return [SearchCandidate("Kabum", "Processador AMD Ryzen 7 5700X3D", "https://www.kabum.com.br/produto/2/cpu", price_cash=1.0)]
+
+    fake = FakeScraper()
+    original_get_scraper = link_search_mod.get_scraper
+    link_search_mod.get_scraper = lambda store_name=None, url=None: fake
+    try:
+        found = link_search_mod.search_store_links("Kabum", "AMD Ryzen 7 5700X3D")
+    finally:
+        link_search_mod.get_scraper = original_get_scraper
+    assert fake.calls == ["AMD Ryzen 7 5700X3D", "Ryzen 7 5700X3D"], f"Buscas feitas: {fake.calls}"
+    assert found[0]["title"] == "Processador AMD Ryzen 7 5700X3D" and found[0]["score"] == 100
+    assert len(found) == 2, "Resultados das duas buscas deveriam ser juntados"
+    print("  [OK] Segunda tentativa sem palavras genéricas quando a loja redireciona")
+
+    with TestClient(app) as client:
+        res = client.get("/api/search", params={"q": "rx 7600", "store": "Pichau"})
+        assert res.status_code == 400, f"Loja sem busca deveria dar 400, deu {res.status_code}"
+        res = client.get("/api/search", params={"q": "x"})
+        assert res.status_code == 422, f"Busca curta deveria dar 422, deu {res.status_code}"
+    print("  [OK] GET /api/search: validações")
 
     print("\n" + "=" * 60)
     print("[SUCESSO] TODOS OS TESTES PASSARAM COM SUCESSO!")

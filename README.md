@@ -44,6 +44,7 @@
 - **Gestão de Links & Produtos:**
   - Cadastro rápido de novos itens com categoria, especificações e preço alvo.
   - Adição e remoção de links específicos por produto.
+  - **Busca de links na Kabum:** digite o produto, veja os anúncios com foto, preço PIX, oferta ativa, vendedor e nota de semelhança, e adicione o certo com um clique.
   - Gestão de leituras e limpeza de histórico de preços para remoção de anomalias.
 - **Notificações Locais:** Suporte a integração via webhook local com servidores de notificação (ex: Notch Cortinho).
 - **Rotinas Automáticas:** Agendamento periódico de varreduras via Maestri CLI (`python run.py --scrape`).

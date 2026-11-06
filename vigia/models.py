@@ -106,6 +106,29 @@ class StatsOverviewResponse(BaseModel):
     last_updated: Optional[str] = None
 
 
+class SearchCandidateOut(BaseModel):
+    store_name: str
+    title: str
+    url: str
+    image: Optional[str] = None
+    price_cash: Optional[float] = None
+    price_installment: Optional[float] = None
+    installments_text: Optional[str] = None
+    in_stock: bool = True
+    seller: Optional[str] = None
+    is_marketplace: bool = False
+    offer_name: Optional[str] = None
+    score: int = Field(..., description="Semelhança com a busca, de 0 a 100")
+    differences: List[str] = Field(default_factory=list, description="Diferenças relevantes (ex: XT, Kit, PC completo)")
+    already_added: bool = False
+
+
+class SearchResponse(BaseModel):
+    store: str
+    query: str
+    results: List[SearchCandidateOut]
+
+
 class ScrapeSummaryResponse(BaseModel):
     total_scraped: int
     success_count: int

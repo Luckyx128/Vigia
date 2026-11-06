@@ -17,9 +17,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { storeLinkService, productService } from '@/services';
 import { getStoreStyle } from '@/lib/constants';
-import { Trash2, Plus, ExternalLink } from 'lucide-react';
+import { Trash2, Plus, ExternalLink, Search, Link2 } from 'lucide-react';
+import { LinkSearchPanel } from './link-search-panel';
 import type { ProductWithStats, ProductDetailResponse } from '@/types';
 
 interface StoreLinksModalProps {
@@ -93,7 +95,7 @@ export function StoreLinksModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-xl bg-card border-border">
+      <DialogContent className="sm:max-w-2xl bg-card border-border">
         <DialogHeader>
           <DialogTitle className="text-lg font-bold">
             Gerenciar Lojas — {product?.name}
@@ -103,40 +105,68 @@ export function StoreLinksModal({
           </DialogDescription>
         </DialogHeader>
 
-        {/* Formulário de adicionar link */}
-        <form onSubmit={handleAddLink} className="p-3 rounded-xl bg-muted/40 border border-border space-y-3">
-          <span className="text-xs font-semibold text-foreground">Adicionar Novo Link</span>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            <Select value={storeName} onValueChange={(val) => setStoreName(val || 'Kabum')}>
-              <SelectTrigger className="h-9 text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Kabum">Kabum</SelectItem>
-                <SelectItem value="Terabyte">Terabyte</SelectItem>
-                <SelectItem value="Pichau">Pichau</SelectItem>
-                <SelectItem value="Amazon">Amazon</SelectItem>
-                <SelectItem value="Mercado Livre">Mercado Livre</SelectItem>
-              </SelectContent>
-            </Select>
+        {/* Adicionar link: busca na loja ou URL colada */}
+        <Tabs defaultValue="search" className="p-3 rounded-xl bg-muted/40 border border-border">
+          <TabsList className="h-8">
+            <TabsTrigger value="search" className="text-xs gap-1.5">
+              <Search className="w-3.5 h-3.5" />
+              Buscar na Kabum
+            </TabsTrigger>
+            <TabsTrigger value="paste" className="text-xs gap-1.5">
+              <Link2 className="w-3.5 h-3.5" />
+              Colar link
+            </TabsTrigger>
+          </TabsList>
 
-            <Input
-              required
-              type="url"
-              placeholder="https://..."
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              className="sm:col-span-2 text-xs h-9"
-            />
-          </div>
+          <TabsContent value="search">
+            {product && (
+              <LinkSearchPanel
+                key={product.id}
+                productId={product.id}
+                initialQuery={product.name}
+                onAdded={async () => {
+                  await loadDetails();
+                  onUpdated();
+                }}
+              />
+            )}
+          </TabsContent>
 
-          <div className="flex justify-end">
-            <Button type="submit" size="sm" disabled={isAdding} className="gap-1.5 text-xs h-8">
-              <Plus className="w-3.5 h-3.5" />
-              <span>{isAdding ? 'Adicionando...' : 'Adicionar Loja'}</span>
-            </Button>
-          </div>
-        </form>
+          <TabsContent value="paste">
+            <form onSubmit={handleAddLink} className="space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <Select value={storeName} onValueChange={(val) => setStoreName(val || 'Kabum')}>
+                  <SelectTrigger className="h-9 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Kabum">Kabum</SelectItem>
+                    <SelectItem value="Terabyte">Terabyte</SelectItem>
+                    <SelectItem value="Pichau">Pichau</SelectItem>
+                    <SelectItem value="Amazon">Amazon</SelectItem>
+                    <SelectItem value="Mercado Livre">Mercado Livre</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Input
+                  required
+                  type="url"
+                  placeholder="https://..."
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                  className="sm:col-span-2 text-xs h-9"
+                />
+              </div>
+
+              <div className="flex justify-end">
+                <Button type="submit" size="sm" disabled={isAdding} className="gap-1.5 text-xs h-8">
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>{isAdding ? 'Adicionando...' : 'Adicionar Loja'}</span>
+                </Button>
+              </div>
+            </form>
+          </TabsContent>
+        </Tabs>
 
         {/* Lista de links cadastrados */}
         <div className="space-y-2 py-2">

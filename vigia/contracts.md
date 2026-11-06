@@ -73,6 +73,14 @@ Porta padrao: 8000
 - `DELETE /api/links/{link_id}`
   Remove um link.
 
+- `GET /api/search?q=RX%207600&store=Kabum&product_id=1`
+  Busca anúncios na loja (por enquanto só `Kabum`), ordenados pela semelhança com `q`. Nada é salvo.
+  `product_id` é opcional e marca `already_added` nos anúncios que o produto já monitora.
+  Response: `{ "store", "query", "results": [{ "title", "url", "image", "price_cash", "price_installment",
+  "installments_text", "in_stock", "seller", "is_marketplace", "offer_name", "score" (0-100),
+  "differences" (ex: ["XT", "Kit"]), "already_added" }] }`
+  Erros: `400` loja sem busca automática, `422` termo com menos de 2 letras, `502` loja não respondeu.
+
 - `GET /api/products/{id}/history`
   Retorna serie temporal para o Chart.js:
   ```json

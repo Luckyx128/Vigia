@@ -2,16 +2,94 @@
 import json
 import logging
 import re
-from typing import Optional
+import time
+from typing import Any, Dict, List, Optional
+from urllib.parse import quote
 from bs4 import BeautifulSoup
 
-from vigia.scrapers.base import BaseScraper, ScrapeResult
+from vigia.scrapers.base import BaseScraper, ScrapeResult, SearchCandidate, SearchError
 
 logger = logging.getLogger("vigia.scrapers.kabum")
 
 
+KABUM_BASE_URL = "https://www.kabum.com.br"
+
+
 class KabumScraper(BaseScraper):
     store_name: str = "Kabum"
+    supports_search: bool = True
+
+    def search(self, query: str) -> List[SearchCandidate]:
+        """Busca na Kabum. A página de busca traz os produtos no JSON do Next.js (__NEXT_DATA__)."""
+        slug = "-".join(query.strip().lower().split())
+        html = self.fetch_html(f"{KABUM_BASE_URL}/busca/{quote(slug)}")
+        if not html:
+            raise SearchError("Não foi possível consultar a Kabum agora")
+        return self.parse_search_html(html)
+
+    @classmethod
+    def parse_search_html(cls, html: str, now: Optional[float] = None) -> List[SearchCandidate]:
+        soup = BeautifulSoup(html, "html.parser")
+        el = soup.find("script", id="__NEXT_DATA__")
+        if not el or not el.string:
+            raise SearchError("A página de busca da Kabum mudou de formato")
+        try:
+            data = json.loads(el.string)["props"]["pageProps"]["data"]
+            if isinstance(data, str):
+                data = json.loads(data)
+            items = data["catalogServer"]["data"]
+        except (KeyError, TypeError, ValueError) as exc:
+            raise SearchError("A página de busca da Kabum mudou de formato") from exc
+
+        now = time.time() if now is None else now
+        results = []
+        for item in items or []:
+            candidate = cls._candidate_from_item(item, now)
+            if candidate:
+                results.append(candidate)
+        return results
+
+    @classmethod
+    def _candidate_from_item(cls, item: Dict[str, Any], now: float) -> Optional[SearchCandidate]:
+        code = item.get("code")
+        name = item.get("name")
+        if not code or not name:
+            return None
+
+        # Oferta relâmpago ativa (ex: Ninja Friday) substitui o preço normal,
+        # igual ao que a página do produto mostra e o monitoramento grava.
+        offer = item.get("offer") or {}
+        offer_active = bool(offer.get("priceWithDiscount")) and (offer.get("endsAt") or 0) > now
+        if offer_active:
+            price_cash = offer.get("priceWithDiscount")
+            price_installment = offer.get("price") or item.get("price")
+        else:
+            price_cash = item.get("priceWithDiscount") or item.get("price")
+            price_installment = item.get("price")
+        if not price_cash:
+            return None
+
+        installments_text = item.get("maxInstallment") or None
+        if installments_text and "juros" not in installments_text:
+            installments_text += " sem juros"
+
+        friendly = item.get("friendlyName") or ""
+        url = f"{KABUM_BASE_URL}/produto/{code}/{friendly}".rstrip("/")
+        flags = item.get("flags") or {}
+
+        return SearchCandidate(
+            store_name=cls.store_name,
+            title=" ".join(str(name).split()),
+            url=url,
+            image=item.get("thumbnail") or item.get("image"),
+            price_cash=round(float(price_cash), 2),
+            price_installment=round(float(price_installment), 2) if price_installment else None,
+            installments_text=installments_text,
+            in_stock=bool(item.get("available", True)),
+            seller=item.get("sellerName"),
+            is_marketplace=bool(flags.get("isMarketplace")),
+            offer_name=offer.get("name") if offer_active else None,
+        )
 
     def _parse_html(self, html: str, url: str) -> Optional[ScrapeResult]:
         soup = BeautifulSoup(html, "html.parser")

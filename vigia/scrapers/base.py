@@ -4,7 +4,7 @@ import logging
 import random
 import re
 from dataclasses import dataclass
-from typing import Optional, Tuple
+from typing import List, Optional, Tuple
 import httpx
 
 from vigia.config import DEFAULT_HEADERS, REQUEST_TIMEOUT, USER_AGENTS
@@ -25,8 +25,29 @@ class ScrapeResult:
     error_message: Optional[str] = None
 
 
+@dataclass
+class SearchCandidate:
+    """Produto encontrado na busca de uma loja, candidato a virar link monitorado."""
+    store_name: str
+    title: str
+    url: str
+    image: Optional[str] = None
+    price_cash: Optional[float] = None
+    price_installment: Optional[float] = None
+    installments_text: Optional[str] = None
+    in_stock: bool = True
+    seller: Optional[str] = None
+    is_marketplace: bool = False
+    offer_name: Optional[str] = None
+
+
+class SearchError(Exception):
+    """A loja não respondeu ou devolveu uma página de busca que não conseguimos ler."""
+
+
 class BaseScraper:
     store_name: str = "Generic"
+    supports_search: bool = False
 
     def __init__(self, timeout: float = REQUEST_TIMEOUT):
         self.timeout = timeout
@@ -217,3 +238,7 @@ class BaseScraper:
     def _parse_html(self, html: str, url: str) -> Optional[ScrapeResult]:
         """Implementado pelas classes filhas."""
         return None
+
+    def search(self, query: str) -> List[SearchCandidate]:
+        """Busca produtos na loja. Só existe nas lojas com supports_search = True."""
+        raise NotImplementedError(f"Busca não suportada para {self.store_name}")

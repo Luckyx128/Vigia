@@ -2,7 +2,7 @@
 import logging
 from contextlib import asynccontextmanager
 from typing import Any, Dict, List, Optional
-from fastapi import FastAPI, HTTPException, status
+from fastapi import FastAPI, HTTPException, Query, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
@@ -24,10 +24,13 @@ from vigia.models import (
     ProductHistoryResponse,
     ProductWithStats,
     ScrapeSummaryResponse,
+    SearchResponse,
     StatsOverviewResponse,
     StoreLinkOut,
 )
+from vigia.link_search import UnsupportedStoreError, search_store_links
 from vigia.notifier import notify_notch
+from vigia.scrapers.base import SearchError
 from vigia.service import (
     calculate_stats_for_product,
     get_overview_stats,
@@ -133,6 +136,24 @@ def remove_store_link(link_id: int):
         raise HTTPException(status_code=404, detail="Link não encontrado")
     success = db_delete_store_link(link_id)
     return {"success": success, "message": f"Link #{link_id} removido com sucesso"}
+
+
+# --- Busca de Links nas Lojas ---
+
+@app.get("/api/search", response_model=SearchResponse, summary="Busca anúncios de um produto numa loja")
+def search_links(
+    q: str = Query(..., min_length=2, description="O que buscar (ex: RX 7600 8GB)"),
+    store: str = Query("Kabum", description="Loja onde buscar"),
+    product_id: Optional[int] = Query(None, description="Marca como já adicionados os links que este produto já monitora"),
+):
+    """Busca anúncios na loja, ordenados pela semelhança com o termo buscado. Nada é salvo."""
+    try:
+        results = search_store_links(store=store, query=q, product_id=product_id)
+    except UnsupportedStoreError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except SearchError as exc:
+        raise HTTPException(status_code=502, detail=str(exc))
+    return {"store": store, "query": q, "results": results}
 
 
 # --- Endpoints de Histórico e Gráficos ---
