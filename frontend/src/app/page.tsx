@@ -15,6 +15,8 @@ import {
   BackgroundModal,
 } from '@/components/modals';
 import Balatro from '@/components/ui/Balatro';
+import SideRays from '@/components/ui/SideRays';
+import Radar from '@/components/ui/Radar';
 import { useBackground } from '@/context/background-context';
 import { Toaster, toast } from 'sonner';
 import { productService, monitorService } from '@/services';
@@ -162,6 +164,62 @@ export default function Home() {
             crt={0}
             mouseStrength={1}
             clickSwirl
+            intro
+            lightMode={false}
+          />
+        </div>
+      )}
+
+      {background === 'siderays' && (
+        <div className="fixed inset-0 pointer-events-none z-0 opacity-50">
+          <SideRays
+            rayColor1="#FFC46B"
+            rayColor2="#96c8ff"
+            origin="top-right"
+            speed={2.5}
+            intensity={2}
+            spread={2}
+            density={5}
+            followMouse
+            blend={0.6}
+            sharpness={0.5}
+            tilt={0}
+            falloff={1.6}
+            glow={1}
+            saturation={1}
+            dust={0}
+            mouseInfluence={0.5}
+            intro
+            lightMode={false}
+            opacity={1}
+          />
+        </div>
+      )}
+
+      {background === 'radar' && (
+        <div className="fixed inset-0 pointer-events-none z-0 opacity-45">
+          <Radar
+            color="#3ef09a"
+            mode="sweep"
+            speed={1}
+            trail={0.35}
+            scale={0.9}
+            ringCount={6}
+            spokeCount={12}
+            targets={6}
+            clutter={0.35}
+            mouseInteraction
+            ticks
+            glow={1}
+            tilt={0}
+            centerX={0.5}
+            centerY={0.5}
+            brightness={1}
+            gridOpacity={1}
+            lineWidth={1}
+            grain={0.03}
+            fade={0}
+            opacity={1}
             intro
             lightMode={false}
           />

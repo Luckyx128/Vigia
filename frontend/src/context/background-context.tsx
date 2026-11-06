@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 
-export type BackgroundTheme = 'balatro' | 'none';
+export type BackgroundTheme = 'balatro' | 'siderays' | 'radar' | 'none';
 
 interface BackgroundContextType {
   background: BackgroundTheme;
