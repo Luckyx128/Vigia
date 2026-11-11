@@ -1,0 +1,16 @@
+[Unit]
+Description=Vigia painel (Next.js)
+After=network-online.target vigia-api.service
+Wants=network-online.target
+
+[Service]
+User=vigia
+Group=vigia
+WorkingDirectory=/opt/vigia/frontend
+Environment=NODE_ENV=production
+ExecStart=/opt/vigia/frontend/node_modules/.bin/next start -p 3001 -H 127.0.0.1
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

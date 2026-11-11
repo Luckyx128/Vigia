@@ -1,0 +1,12 @@
+[Unit]
+Description=Vigia varredura de precos
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=vigia
+Group=vigia
+WorkingDirectory=/opt/vigia
+EnvironmentFile=-/etc/vigia/vigia.env
+ExecStart=/opt/vigia/.venv/bin/python run.py --scrape

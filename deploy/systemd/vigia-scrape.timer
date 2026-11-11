@@ -1,0 +1,10 @@
+[Unit]
+Description=Roda a varredura do Vigia de hora em hora
+
+[Timer]
+OnCalendar=hourly
+RandomizedDelaySec=5min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

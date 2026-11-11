@@ -1,0 +1,16 @@
+[Unit]
+Description=Vigia API (FastAPI)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=vigia
+Group=vigia
+WorkingDirectory=/opt/vigia
+EnvironmentFile=-/etc/vigia/vigia.env
+ExecStart=/opt/vigia/.venv/bin/python run.py --host 127.0.0.1 --port 8000
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
